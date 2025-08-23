@@ -30,10 +30,10 @@ with sync_playwright() as p:
     # Path to your Google Chrome installation. Modify this to point to the Chrome executable on your system.
     chrome_executable_path = CHROME_PATH
 
-    context = browser_type.launch_persistent_context(
-        user_data_dir=PROFILE_PATH,
-        headless=False,
-    )
+        context = browser_type.launch_persistent_context(
+            user_data_dir=PROFILE_PATH,
+            headless=True,
+        )
 
     page = context.new_page()
 
