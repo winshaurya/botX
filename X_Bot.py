@@ -141,11 +141,42 @@ def main():
                         page.wait_for_timeout(randint(3000, 7000))
                         page.click("span:has-text('Next')")
                         page.wait_for_timeout(randint(3000, 7000))
-                        page.wait_for_selector("input[name='password']").fill(PASSWORD)
-                        page.wait_for_timeout(randint(3000, 7000))
-                        page.click("span:has-text('Log in')")
-                        page.wait_for_timeout(randint(7000, 15000))
-                        break
+                        # Try multiple selectors for password input
+                        password_input = None
+                        selectors = [
+                            "input[name='password']",
+                            "input[type='password']",
+                            "input[autocomplete='current-password']"
+                        ]
+                        for sel in selectors:
+                            try:
+                                password_input = page.wait_for_selector(sel, timeout=10000)
+                                if password_input:
+                                    logging.info(f"Found password input using selector: {sel}")
+                                    break
+                            except Exception:
+                                continue
+                        if password_input:
+                            password_input.fill(PASSWORD)
+                            page.wait_for_timeout(randint(3000, 7000))
+                            page.click("span:has-text('Log in')")
+                            page.wait_for_timeout(randint(7000, 15000))
+                            break
+                        else:
+                            # Log all input fields for debugging
+                            input_fields = page.query_selector_all("input")
+                            logging.error(f"Password field not found after clicking Next. URL: {page.url}")
+                            for idx, inp in enumerate(input_fields):
+                                try:
+                                    typ = inp.get_attribute("type")
+                                    name = inp.get_attribute("name")
+                                    autocomplete = inp.get_attribute("autocomplete")
+                                    logging.error(f"Input {idx}: type={typ}, name={name}, autocomplete={autocomplete}")
+                                except Exception:
+                                    continue
+                            with open("debug_login.html", "w", encoding="utf-8") as f:
+                                f.write(page.content())
+                            raise Exception("Password input not found")
                     except Exception as e:
                         logging.error(f"Login attempt {login_attempts + 1} failed due to: {e}")
                         login_attempts += 1
