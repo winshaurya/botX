@@ -31,7 +31,6 @@ with sync_playwright() as p:
     chrome_executable_path = CHROME_PATH
 
     context = browser_type.launch_persistent_context(
-        executable_path=chrome_executable_path,
         user_data_dir=PROFILE_PATH,
         headless=False,
     )
