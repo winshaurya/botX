@@ -187,8 +187,25 @@ def main():
                                     logging.error(f"Input {idx}: type={typ}, name={name}, autocomplete={autocomplete}")
                                 except Exception:
                                     continue
-                            with open("debug_login.html", "w", encoding="utf-8") as f:
+                            debug_path = os.path.abspath("debug_login.html")
+                            with open(debug_path, "w", encoding="utf-8") as f:
                                 f.write(page.content())
+                            logging.error(f"Saved debug HTML to: {debug_path}")
+                            # Extract and log visible error messages from the page
+                            error_selectors = [
+                                "div[role='alert']", # Twitter error messages
+                                "span:has-text('error')",
+                                "span:has-text('not found')",
+                                "span:has-text('verify')",
+                                "span:has-text('couldn')"
+                            ]
+                            for sel in error_selectors:
+                                try:
+                                    error_elem = page.query_selector(sel)
+                                    if error_elem:
+                                        logging.error(f"Visible error: {error_elem.inner_text()}")
+                                except Exception:
+                                    continue
                             raise Exception("Password input not found")
                     except Exception as e:
                         logging.error(f"Login attempt {login_attempts + 1} failed due to: {e}")
