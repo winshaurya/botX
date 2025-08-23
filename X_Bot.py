@@ -17,8 +17,10 @@ logging.basicConfig(level=logging.DEBUG,
 
 
 # Use environment variables set by GitHub Actions secrets. Default to Linux paths if not set.
+# Use phone/email for verification if required
 USERNAME = os.getenv('MY_USERNAME')
 PASSWORD = os.getenv('MY_PASSWORD')
+VERIFICATION_ID = os.getenv('MY_VERIFICATION_ID', USERNAME)  # fallback to username
 # Use Linux-compatible default for CI
 PROFILE_PATH = os.getenv('PROFILE_PATH', '/home/runner/work/botX/profile')
 PERPLEXITY_API_KEY = os.getenv('PERPLEXITY_API_KEY')
@@ -151,6 +153,18 @@ def main():
                                 pass
                         if input_text:
                             input_text.fill(USERNAME)
+                            page.wait_for_timeout(randint(3000, 7000))
+                            page.click("span:has-text('Next')")
+                            page.wait_for_timeout(randint(3000, 7000))
+                        # Check if verification step is required
+                        verification_input = None
+                        try:
+                            verification_input = page.wait_for_selector("input[name='text']", timeout=5000)
+                        except Exception:
+                            pass
+                        if verification_input and verification_input.is_visible():
+                            logging.info("Twitter is requesting verification (phone/email). Filling VERIFICATION_ID...")
+                            verification_input.fill(VERIFICATION_ID)
                             page.wait_for_timeout(randint(3000, 7000))
                             page.click("span:has-text('Next')")
                             page.wait_for_timeout(randint(3000, 7000))
