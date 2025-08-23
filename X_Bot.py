@@ -15,10 +15,12 @@ logging.basicConfig(level=logging.DEBUG,
                     format='%(asctime)s - %(levelname)s - %(message)s',
                     handlers=[logging.StreamHandler()])
 
-USERNAME = os.getenv('MY_USERNAME')  # replace with your environment variable for username
-PASSWORD = os.getenv('MY_PASSWORD')  # replace with your environment variable for password
-PROFILE_PATH = os.getenv('PROFILE_PATH')  # replace with your environment variable for profile path
-CHROME_PATH = os.getenv('CHROME_PATH')  # replace with your environment variable for chrome path
+
+# Use environment variables set by GitHub Actions secrets. Default to Linux paths if not set.
+USERNAME = os.getenv('MY_USERNAME')
+PASSWORD = os.getenv('MY_PASSWORD')
+PROFILE_PATH = os.getenv('PROFILE_PATH', '/home/runner/work/botX/profile')
+CHROME_PATH = os.getenv('CHROME_PATH', '/usr/bin/chromium-browser')
 PERPLEXITY_API_KEY = os.getenv('PERPLEXITY_API_KEY')
 PERPLEXITY_API_URL = "https://api.perplexity.ai/chat/completions"  # Updated endpoint per docs
 
