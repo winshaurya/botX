@@ -37,57 +37,57 @@ def main():
         context = browser.new_context()
         page = context.new_page()
 
-
-    def post_text_tweet(text):
-        try:
-            page.goto("https://twitter.com/compose/tweet")
-            sleep(uniform(5, 10))
-            page.wait_for_selector("div[data-testid='tweetTextarea_0']", timeout=15000)
-            page.fill("div[data-testid='tweetTextarea_0']", text)
-            sleep(uniform(2, 4))
-            selectors = [
-                "div[data-testid='toolBar'] button[data-testid='tweetButtonInline']",
-                "button[data-testid='tweetButtonInline']",
-                "div[role='button'][data-testid='tweetButtonInline']",
-                "button:has-text('Post')",
-            ]
-            post_clicked = False
-            for selector in selectors:
+        # Start bot session
+        MAX_LOGIN_ATTEMPTS = 3
+        page.goto("https://twitter.com/home")
+        sleep(uniform(5, 10))
+        # Login flow
+        if "/i/flow/login" in page.url or "/?logout" in page.url:
+            login_attempts = 0
+            while login_attempts < MAX_LOGIN_ATTEMPTS:
                 try:
-                    button = page.query_selector(selector)
-                    if button:
-                        button.scroll_into_view_if_needed()
-                        sleep(1)
-                        if button.is_enabled():
-                            button.click()
-                            logging.info(f"Clicked Post button using selector: {selector}")
-                            post_clicked = True
-                            break
-                        else:
-                            logging.warning(f"Post button found but not enabled: {selector}")
+                    page.fill("input[name='text']", USERNAME)
+                    sleep(uniform(2, 5))
+                    page.click("span:has-text('Next')")
+                    sleep(uniform(2, 5))
+                    # Verification step
+                    if page.is_visible("input[name='text']") and page.is_visible("span:has-text('Next')"):
+                        page.fill("input[name='text']", VERIFICATION_EMAIL)
+                        sleep(uniform(2, 4))
+                        page.click("span:has-text('Next')")
+                        sleep(uniform(2, 4))
+                    # Password step
+                    if page.is_visible("input[name='password']"):
+                        page.fill("input[name='password']", PASSWORD)
+                        sleep(uniform(2, 4))
+                        page.click("span:has-text('Log in')")
+                        sleep(uniform(5, 10))
+                        break
                 except Exception as e:
-                    logging.warning(f"Failed to click Post button with selector {selector}: {e}")
-            if not post_clicked:
-                logging.error("Could not find or click the Post button. Please check selector or UI changes.")
-            else:
-                sleep(2)
-                logging.info("Posted text tweet successfully.")
-        except Exception as e:
-            logging.error(f"An error occurred while posting the text tweet: {e}")
-
-
-
-    def fetch_text_from_perplexity():
-        url = "https://api.perplexity.ai/chat/completions"
-        headers = {
-            "Authorization": f"Bearer {PERPLEXITY_API_KEY}",
-            "Content-Type": "application/json"
-        }
-        data = {
-            "model": "sonar-pro",
-            "messages": [
-                {"role": "user", "content": PROMPT}
-            ]
+                    logging.error(f"Login attempt {login_attempts + 1} failed due to: {e}")
+                    login_attempts += 1
+                    if login_attempts < MAX_LOGIN_ATTEMPTS:
+                        logging.info("Reloading page for next login attempt...")
+                        sleep(uniform(2, 5))
+                        page.goto("https://twitter.com/home")
+                        sleep(uniform(5, 10))
+            if login_attempts == MAX_LOGIN_ATTEMPTS:
+                logging.error("Reached max login attempts. Please check your credentials or the page structure.")
+                return
+        # Post tweet
+        text = fetch_text_from_perplexity()
+        if text:
+            post_text_tweet(text)
+        else:
+            logging.error("No text fetched from Perplexity.")
+        # Random follow/unfollow action
+        action = choice(['follow', 'unfollow', 'none'])
+        if action == 'follow':
+            follow()
+        elif action == 'unfollow':
+            unfollow()
+        else:
+            logging.info("No follow/unfollow action taken this run.")
         }
         try:
             response = requests.post(url, headers=headers, json=data)
