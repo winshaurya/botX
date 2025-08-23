@@ -88,7 +88,19 @@ def main():
             try:
                 page.goto("https://x.com/home")
                 sleep(uniform(5, 10))
-                tweet_box = page.wait_for_selector("div[data-testid='tweetTextarea_0']", timeout=10000)
+                # Check login status before posting
+                if "/i/flow/login" in page.url or "/?logout" in page.url:
+                    logging.error(f"Not logged in! Current URL: {page.url}")
+                    # Optionally, try to login here or skip
+                    return
+                try:
+                    tweet_box = page.wait_for_selector("div[data-testid='tweetTextarea_0']", timeout=10000)
+                except Exception as e:
+                    logging.error(f"Tweet box not found. URL: {page.url}")
+                    # Save page HTML for debugging
+                    with open("debug_tweetbox.html", "w", encoding="utf-8") as f:
+                        f.write(page.content())
+                    return
                 tweet_box.click()
                 page.keyboard.type(text)
                 sleep(uniform(2, 4))
