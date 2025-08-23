@@ -37,10 +37,40 @@ with sync_playwright() as p:
         try:
             page.goto("https://twitter.com/compose/tweet")
             sleep(uniform(5, 10))
-            page.fill("div[aria-label='Tweet text']", text)
+            # Wait for the tweet box to be available
+            page.wait_for_selector("div[data-testid='tweetTextarea_0']", timeout=15000)
+            page.fill("div[data-testid='tweetTextarea_0']", text)
             sleep(uniform(2, 4))
-            page.click("span:has-text('Post')")
-            logging.info("Posted text tweet successfully.")
+
+            # Try multiple ways to find and click the Post button
+            selectors = [
+                "div[data-testid='toolBar'] button[data-testid='tweetButtonInline']",  # usual
+                "button[data-testid='tweetButtonInline']",  # fallback
+                "div[role='button'][data-testid='tweetButtonInline']",  # fallback
+                "button:has-text('Post')",  # visible text
+            ]
+            post_clicked = False
+            for selector in selectors:
+                try:
+                    button = page.query_selector(selector)
+                    if button:
+                        # Scroll into view and check enabled state
+                        button.scroll_into_view_if_needed()
+                        sleep(1)
+                        if button.is_enabled():
+                            button.click()
+                            logging.info(f"Clicked Post button using selector: {selector}")
+                            post_clicked = True
+                            break
+                        else:
+                            logging.warning(f"Post button found but not enabled: {selector}")
+                except Exception as e:
+                    logging.warning(f"Failed to click Post button with selector {selector}: {e}")
+            if not post_clicked:
+                logging.error("Could not find or click the Post button. Please check selector or UI changes.")
+            else:
+                sleep(2)
+                logging.info("Posted text tweet successfully.")
         except Exception as e:
             logging.error(f"An error occurred while posting the text tweet: {e}")
 
@@ -55,14 +85,16 @@ with sync_playwright() as p:
             "Content-Type": "application/json"
         }
         data = {
-            "model": "sonar-small-chat",
+            "model": "sonar-pro",
             "messages": [
                 {"role": "user", "content": prompt}
             ]
         }
         try:
             response = requests.post(url, headers=headers, json=data)
-            response.raise_for_status()
+            if response.status_code != 200:
+                logging.error(f"Perplexity API error {response.status_code}: {response.text}")
+                response.raise_for_status()
             result = response.json()
             # Extract the text from the response
             return result['choices'][0]['message']['content']
@@ -162,26 +194,35 @@ with sync_playwright() as p:
                     sleep(uniform(2, 5))
                     page.click("span:has-text('Next')")
                     sleep(uniform(2, 5))
-                    page.wait_for_selector("input[name='password']").fill(PASSWORD)
-                    sleep(uniform(2, 5))
-                    page.click("span:has-text('Log in')")
-                    sleep(uniform(5, 10))
-                    break
+
+                    # Check for verification step (email/phone)
+                    if page.is_visible("input[name='text']") and page.is_visible("span:has-text('Next')"):
+                        VERIFICATION_EMAIL = os.getenv('VERIFICATION_EMAIL')
+                        page.fill("input[name='text']", VERIFICATION_EMAIL)
+                        sleep(uniform(2, 4))
+                        page.click("span:has-text('Next')")
+                        sleep(uniform(2, 4))
+
+                    # Check for password step
+                    if page.is_visible("input[name='password']"):
+                        page.fill("input[name='password']", PASSWORD)
+                        sleep(uniform(2, 4))
+                        page.click("span:has-text('Log in')")
+                        sleep(uniform(5, 10))
+                        break
 
                 except Exception as e:
-                    # This will print the type of exception and its message
                     logging.error(f"Login attempt {login_attempts + 1} failed due to: {e}")
                     login_attempts += 1
                     if login_attempts < MAX_LOGIN_ATTEMPTS:
                         logging.info("Reloading page for next login attempt...")
-                        sleep(uniform(2, 5))  # Adding a short sleep before reloading
+                        sleep(uniform(2, 5))
                         page.goto("https://twitter.com/home")
-                        sleep(uniform(5, 10))  # Adding sleep before retrying
+                        sleep(uniform(5, 10))
 
-            # If reached max attempts and still not logged in
             if login_attempts == MAX_LOGIN_ATTEMPTS:
                 logging.error("Reached max login attempts. Please check your credentials or the page structure.")
-                break  # Exit the main loop
+                break
 
         # Define the total number of posts to make in the day
         num_of_posts_today = randint(4, 6)
