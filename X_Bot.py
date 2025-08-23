@@ -130,17 +130,30 @@ def main():
         MAX_LOGIN_ATTEMPTS = 3
 
         while True:
-            page.goto("https://twitter.com/home")
+            page.goto("https://x.com/home")
             page.wait_for_timeout(randint(8000, 15000))
 
             if "/i/flow/login" in page.url or "/?logout" in page.url:
                 login_attempts = 0
                 while login_attempts < MAX_LOGIN_ATTEMPTS:
                     try:
-                        page.fill("input[name='text']", USERNAME)
+                        page.goto("https://x.com/i/flow/login")
                         page.wait_for_timeout(randint(3000, 7000))
-                        page.click("span:has-text('Next')")
-                        page.wait_for_timeout(randint(3000, 7000))
+                        # Fill username/email/phone
+                        input_text = None
+                        try:
+                            input_text = page.wait_for_selector("input[name='text']", timeout=10000)
+                        except Exception:
+                            # Try fallback selector
+                            try:
+                                input_text = page.wait_for_selector("input[type='text']", timeout=5000)
+                            except Exception:
+                                pass
+                        if input_text:
+                            input_text.fill(USERNAME)
+                            page.wait_for_timeout(randint(3000, 7000))
+                            page.click("span:has-text('Next')")
+                            page.wait_for_timeout(randint(3000, 7000))
                         # Try multiple selectors for password input
                         password_input = None
                         selectors = [
@@ -183,7 +196,7 @@ def main():
                         if login_attempts < MAX_LOGIN_ATTEMPTS:
                             logging.info("Reloading page for next login attempt...")
                             page.wait_for_timeout(randint(3000, 7000))
-                            page.goto("https://twitter.com/home")
+                            page.goto("https://x.com/home")
                             page.wait_for_timeout(randint(8000, 15000))
                 if login_attempts == MAX_LOGIN_ATTEMPTS:
                     logging.error("Reached max login attempts. Please check your credentials or the page structure.")
