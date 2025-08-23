@@ -53,6 +53,54 @@ def get_perplexity_answer(prompt):
 
 
 def main():
+                        # Helper: Try to detect and respond to Twitter's prompt/question
+                        def handle_twitter_prompt():
+                            prompt_text = None
+                            try:
+                                # Try to find the main prompt/question
+                                prompt_elem = page.query_selector("div[role='alert'], div[role='dialog'] span, div[role='dialog'] div")
+                                if prompt_elem:
+                                    prompt_text = prompt_elem.inner_text().strip()
+                                    logging.info(f"Twitter prompt: {prompt_text}")
+                            except Exception:
+                                pass
+                            # Respond to known prompts
+                            if prompt_text:
+                                if "phone number" in prompt_text or "email address" in prompt_text or "verify" in prompt_text:
+                                    logging.info("Detected prompt for phone/email. Filling VERIFICATION_ID...")
+                                    input_elem = None
+                                    try:
+                                        input_elem = page.wait_for_selector("input[name='text']", timeout=5000)
+                                    except Exception:
+                                        pass
+                                    if input_elem and input_elem.is_visible():
+                                        input_elem.fill(VERIFICATION_ID)
+                                        page.wait_for_timeout(randint(3000, 7000))
+                                        page.click("span:has-text('Next')")
+                                        page.wait_for_timeout(randint(3000, 7000))
+                                        return True
+                                if "password" in prompt_text:
+                                    logging.info("Detected prompt for password. Filling PASSWORD...")
+                                    password_elem = None
+                                    selectors = [
+                                        "input[name='password']",
+                                        "input[type='password']",
+                                        "input[autocomplete='current-password']"
+                                    ]
+                                    for sel in selectors:
+                                        try:
+                                            password_elem = page.wait_for_selector(sel, timeout=5000)
+                                            if password_elem:
+                                                break
+                                        except Exception:
+                                            continue
+                                    if password_elem and password_elem.is_visible():
+                                        password_elem.fill(PASSWORD)
+                                        page.wait_for_timeout(randint(3000, 7000))
+                                        page.click("span:has-text('Log in')")
+                                        page.wait_for_timeout(randint(7000, 15000))
+                                        return True
+                            return False
     with sync_playwright() as p:
         browser_type = p.chromium
         context = browser_type.launch_persistent_context(
@@ -69,7 +117,7 @@ def main():
         )
         page = context.new_page()
 
-        def post_tweet(file_path):
+    def post_tweet(file_path):
             try:
                 page.goto("https://x.com/home")
                 page.wait_for_timeout(randint(8000, 15000))
@@ -94,7 +142,55 @@ def main():
             except Exception as e:
                 logging.error(f"An error occurred while posting the tweet: {e}")
 
-        def post_text_tweet(text):
+    def post_text_tweet(text):
+        # Helper: Try to detect and respond to Twitter's prompt/question
+        def handle_twitter_prompt():
+            prompt_text = None
+            try:
+                # Try to find the main prompt/question
+                prompt_elem = page.query_selector("div[role='alert'], div[role='dialog'] span, div[role='dialog'] div")
+                if prompt_elem:
+                    prompt_text = prompt_elem.inner_text().strip()
+                    logging.info(f"Twitter prompt: {prompt_text}")
+            except Exception:
+                pass
+            # Respond to known prompts
+            if prompt_text:
+                if "phone number" in prompt_text or "email address" in prompt_text or "verify" in prompt_text:
+                    logging.info("Detected prompt for phone/email. Filling VERIFICATION_ID...")
+                    input_elem = None
+                    try:
+                        input_elem = page.wait_for_selector("input[name='text']", timeout=5000)
+                    except Exception:
+                        pass
+                    if input_elem and input_elem.is_visible():
+                        input_elem.fill(VERIFICATION_ID)
+                        page.wait_for_timeout(randint(3000, 7000))
+                        page.click("span:has-text('Next')")
+                        page.wait_for_timeout(randint(3000, 7000))
+                        return True
+                if "password" in prompt_text:
+                    logging.info("Detected prompt for password. Filling PASSWORD...")
+                    password_elem = None
+                    selectors = [
+                        "input[name='password']",
+                        "input[type='password']",
+                        "input[autocomplete='current-password']"
+                    ]
+                    for sel in selectors:
+                        try:
+                            password_elem = page.wait_for_selector(sel, timeout=5000)
+                            if password_elem:
+                                break
+                        except Exception:
+                            continue
+                    if password_elem and password_elem.is_visible():
+                        password_elem.fill(PASSWORD)
+                        page.wait_for_timeout(randint(3000, 7000))
+                        page.click("span:has-text('Log in')")
+                        page.wait_for_timeout(randint(7000, 15000))
+                        return True
+            return False
             try:
                 page.goto("https://x.com/home")
                 page.wait_for_timeout(randint(8000, 15000))
@@ -156,39 +252,33 @@ def main():
                             page.wait_for_timeout(randint(3000, 7000))
                             page.click("span:has-text('Next')")
                             page.wait_for_timeout(randint(3000, 7000))
-                        # Check if verification step is required
-                        verification_input = None
-                        try:
-                            verification_input = page.wait_for_selector("input[name='text']", timeout=5000)
-                        except Exception:
-                            pass
-                        if verification_input and verification_input.is_visible():
-                            logging.info("Twitter is requesting verification (phone/email). Filling VERIFICATION_ID...")
-                            verification_input.fill(VERIFICATION_ID)
-                            page.wait_for_timeout(randint(3000, 7000))
-                            page.click("span:has-text('Next')")
-                            page.wait_for_timeout(randint(3000, 7000))
-                        # Try multiple selectors for password input
-                        password_input = None
-                        selectors = [
-                            "input[name='password']",
-                            "input[type='password']",
-                            "input[autocomplete='current-password']"
-                        ]
-                        for sel in selectors:
-                            try:
-                                password_input = page.wait_for_selector(sel, timeout=10000)
-                                if password_input:
-                                    logging.info(f"Found password input using selector: {sel}")
-                                    break
-                            except Exception:
+                        # Loop: keep handling Twitter prompts until login proceeds or fails
+                        for _ in range(5):
+                            if handle_twitter_prompt():
                                 continue
-                        if password_input:
-                            password_input.fill(PASSWORD)
-                            page.wait_for_timeout(randint(3000, 7000))
-                            page.click("span:has-text('Log in')")
-                            page.wait_for_timeout(randint(7000, 15000))
-                            break
+                            # Try multiple selectors for password input
+                            password_input = None
+                            selectors = [
+                                "input[name='password']",
+                                "input[type='password']",
+                                "input[autocomplete='current-password']"
+                            ]
+                            for sel in selectors:
+                                try:
+                                    password_input = page.wait_for_selector(sel, timeout=5000)
+                                    if password_input:
+                                        break
+                                except Exception:
+                                    continue
+                            if password_input and password_input.is_visible():
+                                password_input.fill(PASSWORD)
+                                page.wait_for_timeout(randint(3000, 7000))
+                                page.click("span:has-text('Log in')")
+                                page.wait_for_timeout(randint(7000, 15000))
+                                # Check for email prompt after password
+                                if handle_twitter_prompt():
+                                    continue
+                                break
                         else:
                             # Log all input fields for debugging
                             input_fields = page.query_selector_all("input")
