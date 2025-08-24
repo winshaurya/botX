@@ -27,7 +27,8 @@ USERNAME = os.getenv('MY_USERNAME')
 PASSWORD = os.getenv('MY_PASSWORD')
 VERIFICATION_EMAIL = os.getenv('VERIFICATION_EMAIL')
 PERPLEXITY_API_KEY = os.getenv('PERPLEXITY_API_KEY')
-PROMPT = os.getenv('PROMPT')
+# Hard-coded prompt value
+PROMPT = "give me a biased opinion on tech or digital media taken from random famous reddit. only text no numbers at the end , ready to copy paste"
 
 def fetch_text_from_perplexity():
     url = "https://api.perplexity.ai/chat/completions"
