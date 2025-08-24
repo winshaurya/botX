@@ -172,52 +172,30 @@ def main():
                     page.wait_for_selector("input[name='text']", timeout=20000)
                     page.fill("input[name='text']", USERNAME)
                     sleep(uniform(2, 5))
-                    # Click Next (span inside div)
-                    next_span_selector = "span:has-text('Next')"
-                    page.wait_for_selector(next_span_selector, timeout=20000)
-                    next_spans = page.query_selector_all(next_span_selector)
-                    clicked = False
-                    for span in next_spans:
-                        parent = span.evaluate_handle("node => node.parentElement")
-                        if parent:
-                            try:
-                                parent.click()
-                                clicked = True
-                                print("[Bot] Clicked Next span parent.")
-                                break
-                            except Exception:
-                                continue
-                    if not clicked and next_spans:
-                        try:
-                            next_spans[0].click()
-                            print("[Bot] Clicked Next span directly.")
-                        except Exception:
-                            print("[Bot] Failed to click Next span.")
+                    # Click Next button (based on screenshot and HTML)
+                    next_button_selector = "button[role='button']:has-text('Next')"
+                    page.wait_for_selector(next_button_selector, timeout=20000)
+                    next_button = page.query_selector(next_button_selector)
+                    if next_button and next_button.is_enabled():
+                        next_button.click()
+                        print("[Bot] Clicked Next button.")
+                    else:
+                        print("[Bot] Next button not found or not enabled.")
                     sleep(uniform(2, 5))
                     # Verification email input
                     if page.is_visible("input[data-testid='ocfEnterTextTextInput']"):
                         print("[Bot] Verification required. Filling email...")
                         page.fill("input[data-testid='ocfEnterTextTextInput']", VERIFICATION_EMAIL)
                         sleep(uniform(2, 4))
-                        page.wait_for_selector(next_span_selector, timeout=20000)
-                        next_spans = page.query_selector_all(next_span_selector)
-                        clicked = False
-                        for span in next_spans:
-                            parent = span.evaluate_handle("node => node.parentElement")
-                            if parent:
-                                try:
-                                    parent.click()
-                                    clicked = True
-                                    print("[Bot] Clicked Next span parent after email.")
-                                    break
-                                except Exception:
-                                    continue
-                        if not clicked and next_spans:
-                            try:
-                                next_spans[0].click()
-                                print("[Bot] Clicked Next span directly after email.")
-                            except Exception:
-                                print("[Bot] Failed to click Next span after email.")
+                        # Click Next button after email (based on screenshot and HTML)
+                        next_button_selector = "button[role='button']:has-text('Next')"
+                        page.wait_for_selector(next_button_selector, timeout=20000)
+                        next_button = page.query_selector(next_button_selector)
+                        if next_button and next_button.is_enabled():
+                            next_button.click()
+                            print("[Bot] Clicked Next button after email.")
+                        else:
+                            print("[Bot] Next button after email not found or not enabled.")
                         sleep(uniform(2, 4))
                     # Password input
                     if page.is_visible("input[name='password']"):
