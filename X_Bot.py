@@ -169,38 +169,65 @@ def main():
             while login_attempts < MAX_LOGIN_ATTEMPTS:
                 try:
                     print(f"[Bot] Attempt {login_attempts + 1}: Filling username...")
+                    page.wait_for_selector("input[name='text']", timeout=20000)
                     page.fill("input[name='text']", USERNAME)
                     sleep(uniform(2, 5))
-                    print("[Bot] Waiting for Next button to be enabled...")
-                    next_button_selector = "button:has-text('Next')"
-                    page.wait_for_selector(next_button_selector, timeout=20000, state="visible")
-                    next_button = page.query_selector(next_button_selector)
-                    if next_button and next_button.is_enabled():
-                        print("[Bot] Clicking Next...")
-                        next_button.click()
-                    else:
-                        print("[Bot] Next button not enabled, skipping click.")
+                    # Click Next (span inside div)
+                    next_span_selector = "span:has-text('Next')"
+                    page.wait_for_selector(next_span_selector, timeout=20000)
+                    next_spans = page.query_selector_all(next_span_selector)
+                    clicked = False
+                    for span in next_spans:
+                        parent = span.evaluate_handle("node => node.parentElement")
+                        if parent:
+                            try:
+                                parent.click()
+                                clicked = True
+                                print("[Bot] Clicked Next span parent.")
+                                break
+                            except Exception:
+                                continue
+                    if not clicked and next_spans:
+                        try:
+                            next_spans[0].click()
+                            print("[Bot] Clicked Next span directly.")
+                        except Exception:
+                            print("[Bot] Failed to click Next span.")
                     sleep(uniform(2, 5))
-                    if page.is_visible("input[name='text']") and page.is_visible(next_button_selector):
+                    # Verification email input
+                    if page.is_visible("input[data-testid='ocfEnterTextTextInput']"):
                         print("[Bot] Verification required. Filling email...")
-                        page.fill("input[name='text']", VERIFICATION_EMAIL)
+                        page.fill("input[data-testid='ocfEnterTextTextInput']", VERIFICATION_EMAIL)
                         sleep(uniform(2, 4))
-                        page.wait_for_selector(next_button_selector, timeout=20000, state="visible")
-                        next_button = page.query_selector(next_button_selector)
-                        if next_button and next_button.is_enabled():
-                            print("[Bot] Clicking Next...")
-                            next_button.click()
-                        else:
-                            print("[Bot] Next button not enabled, skipping click.")
+                        page.wait_for_selector(next_span_selector, timeout=20000)
+                        next_spans = page.query_selector_all(next_span_selector)
+                        clicked = False
+                        for span in next_spans:
+                            parent = span.evaluate_handle("node => node.parentElement")
+                            if parent:
+                                try:
+                                    parent.click()
+                                    clicked = True
+                                    print("[Bot] Clicked Next span parent after email.")
+                                    break
+                                except Exception:
+                                    continue
+                        if not clicked and next_spans:
+                            try:
+                                next_spans[0].click()
+                                print("[Bot] Clicked Next span directly after email.")
+                            except Exception:
+                                print("[Bot] Failed to click Next span after email.")
                         sleep(uniform(2, 4))
-                    password_button_selector = "button:has-text('Log in')"
+                    # Password input
                     if page.is_visible("input[name='password']"):
                         print("[Bot] Filling password...")
                         page.fill("input[name='password']", PASSWORD)
                         sleep(uniform(2, 4))
-                        print("[Bot] Waiting for Log in button to be enabled...")
-                        page.wait_for_selector(password_button_selector, timeout=20000, state="visible")
-                        login_button = page.query_selector(password_button_selector)
+                        # Log in button (data-testid)
+                        login_button_selector = "button[data-testid='LoginForm_Login_Button']"
+                        page.wait_for_selector(login_button_selector, timeout=20000)
+                        login_button = page.query_selector(login_button_selector)
                         if login_button and login_button.is_enabled():
                             print("[Bot] Clicking Log in...")
                             login_button.click()
@@ -212,12 +239,11 @@ def main():
                 except Exception as e:
                     print(f"[Bot] Login attempt {login_attempts + 1} failed: {e}")
                     login_attempts += 1
-                    if login_attempts < MAX_LOGIN_ATTEMPTS:
-                        print("[Bot] Reloading page for next login attempt...")
-                        sleep(uniform(2, 5))
-                        page.goto("https://twitter.com/home")
-                        print(f"[Bot] Current URL: {page.url}")
-                        sleep(uniform(5, 10))
+                    print("[Bot] Reloading page for next login attempt...")
+                    sleep(uniform(2, 5))
+                    page.goto("https://x.com/i/flow/login")
+                    print(f"[Bot] Current URL: {page.url}")
+                    sleep(uniform(5, 10))
             if login_attempts == MAX_LOGIN_ATTEMPTS:
                 print("[Bot] Reached max login attempts. Exiting.")
                 return
