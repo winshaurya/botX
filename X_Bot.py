@@ -58,57 +58,50 @@ def fetch_text_from_perplexity():
 
 def post_text_tweet(page, text):
     try:
-        page.goto("https://twitter.com/compose/tweet")
+        # Always navigate to home after login
+        page.goto("https://x.com/home")
         sleep(uniform(5, 10))
-        textarea_selectors = [
-            "div[data-testid='tweetTextarea_0']",
-            "div[aria-label='Tweet text']",
-            "div[role='textbox']",
-        ]
-        tweet_box_found = False
-        for selector in textarea_selectors:
-            try:
-                print(f"[Bot] Trying textarea selector: {selector}")
-                page.wait_for_selector(selector, timeout=30000)
-                page.fill(selector, text)
-                tweet_box_found = True
-                print(f"[Bot] Filled tweet box using selector: {selector}")
-                break
-            except Exception as e:
-                print(f"[Bot] Textarea selector failed: {selector} | Error: {e}")
-        if not tweet_box_found:
-            print("[Bot] Tweet textarea not found on compose page.")
-            logging.error("Tweet textarea not found on compose page.")
+
+        # Wait for the tweet box to be visible
+        tweet_box_selector = 'div[data-testid="tweetTextarea_0"][contenteditable="true"]'
+        try:
+            page.wait_for_selector(tweet_box_selector, timeout=40000)
+            tweet_box = page.query_selector(tweet_box_selector)
+            if tweet_box:
+                tweet_box.click()
+                sleep(1)
+                page.keyboard.type(text)
+                print("[Bot] Typed tweet in the box.")
+            else:
+                raise Exception("Tweet box not found after wait.")
+        except Exception as e:
+            print(f"[Bot] Failed to find or type in tweet box: {e}")
+            logging.error(f"Failed to find or type in tweet box: {e}")
             return
+
         sleep(uniform(2, 4))
-        selectors = [
-            "div[data-testid='toolBar'] button[data-testid='tweetButtonInline']",
-            "button[data-testid='tweetButtonInline']",
-            "div[role='button'][data-testid='tweetButtonInline']",
-            "button:has-text('Post')",
-        ]
-        post_clicked = False
-        for selector in selectors:
-            button = None
-            try:
-                button = page.wait_for_selector(selector, timeout=20000)
-            except Exception as e:
-                print(f"[Bot] Post button selector failed: {selector} | Error: {e}")
-            if button:
-                print("[Bot] Clicking post button...")
-                button.click()
-                post_clicked = True
-                break
-        if not post_clicked:
-            print("[Bot] Tweet button not found on compose page.")
-            logging.error("Tweet button not found on compose page.")
-        else:
-            print("[Bot] Tweet posted successfully from compose page.")
-            logging.info("Tweet posted successfully from compose page.")
+
+        # Wait for the Post button to be enabled
+        post_button_selector = 'button[data-testid="tweetButtonInline"]'
+        try:
+            page.wait_for_selector(post_button_selector, timeout=20000)
+            post_button = page.query_selector(post_button_selector)
+            if post_button and post_button.is_enabled():
+                post_button.click()
+                print("[Bot] Clicked Post button.")
+                logging.info("Tweet posted successfully.")
+            else:
+                raise Exception("Post button not found or not enabled.")
+        except Exception as e:
+            print(f"[Bot] Failed to click Post button: {e}")
+            logging.error(f"Failed to click Post button: {e}")
+            return
+
         print(f"[Bot] Final page URL after posting: {page.url}")
+
     except Exception as e:
-        print(f"[Bot] Failed to post tweet from compose page: {e}")
-        logging.error(f"Failed to post tweet from compose page: {e}")
+        print(f"[Bot] Failed to post tweet: {e}")
+        logging.error(f"Failed to post tweet: {e}")
 
 def follow(page):
     follow_id_list = []  # List of usernames to follow (set as needed)
