@@ -1,25 +1,4 @@
-def click_dynamic_next_button(page, keywords=["next", "continue", "enter"]):
-    """
-    Searches for all visible buttons and clicks the first enabled one whose text matches any keyword.
-    Returns True if a button was clicked, False otherwise.
-    """
-    buttons = page.query_selector_all("button[role='button']")
-    for btn in buttons:
-        try:
-            text = btn.inner_text().strip().lower()
-            for kw in keywords:
-                if kw in text and btn.is_enabled():
-                    btn.click()
-                    print(f"[Bot] Clicked button with text: {text}")
-                    return True
-        except Exception as e:
-            continue
-    print(f"[Bot] No enabled button found for keywords: {keywords}")
-    # For debugging: log page HTML if no button found
-    logging.debug(page.content())
-    return False
 """
-# Trigger rebuild: test for line ending/corruption issue
 Twitter Bot for GitHub Actions
 --------------------------------
 Automates posting tweets, following/unfollowing users, and handles login flows including verification.
@@ -101,20 +80,17 @@ def post_text_tweet(page, text):
 
         sleep(uniform(2, 4))
 
-        # Wait for the Post button to be enabled
-        post_button_selector = 'button[data-testid="tweetButtonInline"]'
-        try:
-            page.wait_for_selector(post_button_selector, timeout=20000)
-            post_button = page.query_selector(post_button_selector)
-            if post_button and post_button.is_enabled():
-                post_button.click()
-                print("[Bot] Clicked Post button.")
-                logging.info("Tweet posted successfully.")
-            else:
-                raise Exception("Post button not found or not enabled.")
-        except Exception as e:
-            print(f"[Bot] Failed to click Post button: {e}")
-            logging.error(f"Failed to click Post button: {e}")
+        # Click Post button (static selector from x.html)
+        post_button_selector = "button[data-testid='tweetButtonInline']"
+        page.wait_for_selector(post_button_selector, timeout=20000)
+        post_button = page.query_selector(post_button_selector)
+        if post_button and post_button.is_enabled():
+            post_button.click()
+            print("[Bot] Clicked Post button.")
+            logging.info("Tweet posted successfully.")
+        else:
+            print("[Bot] Post button not found or not enabled.")
+            logging.error("Post button not found or not enabled.")
             return
 
         print(f"[Bot] Final page URL after posting: {page.url}")
@@ -192,33 +168,44 @@ def main():
                     page.wait_for_selector("input[name='text']", timeout=20000)
                     page.fill("input[name='text']", USERNAME)
                     sleep(uniform(2, 5))
-                    # Dynamically find and click Next/Continue/Enter button
-                    page.wait_for_selector("button[role='button']", timeout=20000)
-                    click_dynamic_next_button(page)
+                    # Click Next button (static selector from x.html)
+                    next_button_selector = "button[role='button']:has-text('Next')"
+                    page.wait_for_selector(next_button_selector, timeout=20000)
+                    next_button = page.query_selector(next_button_selector)
+                    if next_button and next_button.is_enabled():
+                        next_button.click()
+                        print("[Bot] Clicked Next button.")
+                    else:
+                        print("[Bot] Next button not found or not enabled.")
                     sleep(uniform(2, 5))
                     # Verification email input
                     if page.is_visible("input[data-testid='ocfEnterTextTextInput']"):
                         print("[Bot] Verification required. Filling email...")
                         page.fill("input[data-testid='ocfEnterTextTextInput']", VERIFICATION_EMAIL)
                         sleep(uniform(2, 4))
-                        # Dynamically find and click Next/Continue/Enter button after email
-                        page.wait_for_selector("button[role='button']", timeout=20000)
-                        click_dynamic_next_button(page)
+                        # Click Next button after email (static selector from x.html)
+                        page.wait_for_selector(next_button_selector, timeout=20000)
+                        next_button = page.query_selector(next_button_selector)
+                        if next_button and next_button.is_enabled():
+                            next_button.click()
+                            print("[Bot] Clicked Next button after email.")
+                        else:
+                            print("[Bot] Next button after email not found or not enabled.")
                         sleep(uniform(2, 4))
                     # Password input
                     if page.is_visible("input[name='password']"):
                         print("[Bot] Filling password...")
                         page.fill("input[name='password']", PASSWORD)
                         sleep(uniform(2, 4))
-                        # Log in button (data-testid)
+                        # Click Log in button (static selector from x.html)
                         login_button_selector = "button[data-testid='LoginForm_Login_Button']"
                         page.wait_for_selector(login_button_selector, timeout=20000)
                         login_button = page.query_selector(login_button_selector)
                         if login_button and login_button.is_enabled():
-                            print("[Bot] Clicking Log in...")
                             login_button.click()
+                            print("[Bot] Clicked Log in button.")
                         else:
-                            print("[Bot] Log in button not enabled, skipping click.")
+                            print("[Bot] Log in button not found or not enabled.")
                         sleep(uniform(5, 10))
                         print("[Bot] Login successful.")
                         break
@@ -254,9 +241,6 @@ def main():
             unfollow(page)
         else:
             print("[Bot] No follow/unfollow action taken this run.")
-
-if __name__ == "__main__":
-    main()
 
 if __name__ == "__main__":
     main()
