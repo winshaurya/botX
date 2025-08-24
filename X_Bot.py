@@ -171,21 +171,41 @@ def main():
                     print(f"[Bot] Attempt {login_attempts + 1}: Filling username...")
                     page.fill("input[name='text']", USERNAME)
                     sleep(uniform(2, 5))
-                    print("[Bot] Clicking Next...")
-                    page.click("span:has-text('Next')")
+                    print("[Bot] Waiting for Next button to be enabled...")
+                    next_button_selector = "button:has-text('Next')"
+                    page.wait_for_selector(next_button_selector, timeout=20000, state="visible")
+                    next_button = page.query_selector(next_button_selector)
+                    if next_button and next_button.is_enabled():
+                        print("[Bot] Clicking Next...")
+                        next_button.click()
+                    else:
+                        print("[Bot] Next button not enabled, skipping click.")
                     sleep(uniform(2, 5))
-                    if page.is_visible("input[name='text']") and page.is_visible("span:has-text('Next')"):
+                    if page.is_visible("input[name='text']") and page.is_visible(next_button_selector):
                         print("[Bot] Verification required. Filling email...")
                         page.fill("input[name='text']", VERIFICATION_EMAIL)
                         sleep(uniform(2, 4))
-                        page.click("span:has-text('Next')")
+                        page.wait_for_selector(next_button_selector, timeout=20000, state="visible")
+                        next_button = page.query_selector(next_button_selector)
+                        if next_button and next_button.is_enabled():
+                            print("[Bot] Clicking Next...")
+                            next_button.click()
+                        else:
+                            print("[Bot] Next button not enabled, skipping click.")
                         sleep(uniform(2, 4))
+                    password_button_selector = "button:has-text('Log in')"
                     if page.is_visible("input[name='password']"):
                         print("[Bot] Filling password...")
                         page.fill("input[name='password']", PASSWORD)
                         sleep(uniform(2, 4))
-                        print("[Bot] Clicking Log in...")
-                        page.click("span:has-text('Log in')")
+                        print("[Bot] Waiting for Log in button to be enabled...")
+                        page.wait_for_selector(password_button_selector, timeout=20000, state="visible")
+                        login_button = page.query_selector(password_button_selector)
+                        if login_button and login_button.is_enabled():
+                            print("[Bot] Clicking Log in...")
+                            login_button.click()
+                        else:
+                            print("[Bot] Log in button not enabled, skipping click.")
                         sleep(uniform(5, 10))
                         print("[Bot] Login successful.")
                         break
