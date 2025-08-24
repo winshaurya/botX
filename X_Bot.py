@@ -128,7 +128,6 @@ def follow(page):
         logging.info(f"Followed {followed_count} accounts.")
     except Exception as e:
         logging.error(f"Error in follow(): {e}")
-
 def unfollow(page):
     try:
         page.goto("https://twitter.com/@/following")
@@ -151,7 +150,6 @@ def unfollow(page):
         logging.info(f"Unfollowed {unfollowed_count} accounts.")
     except Exception as e:
         logging.error(f"Error in unfollow(): {e}")
-
 def main():
     with sync_playwright() as p:
         print("[Bot] Launching browser...")
@@ -207,6 +205,9 @@ def main():
         text = fetch_text_from_perplexity()
         if text:
             print(f"[Bot] Text fetched: {text}")
+            print("[Bot] Navigating to home page before posting...")
+            page.goto("https://x.com/home", wait_until="networkidle")
+            sleep(uniform(5, 10))
             print("[Bot] Posting tweet...")
             post_text_tweet(page, text)
         else:
@@ -221,6 +222,9 @@ def main():
             unfollow(page)
         else:
             print("[Bot] No follow/unfollow action taken this run.")
+
+if __name__ == "__main__":
+    main()
 
 if __name__ == "__main__":
     main()
