@@ -22,12 +22,10 @@ logging.basicConfig(level=logging.DEBUG,
                     format='%(asctime)s - %(levelname)s - %(message)s',
                     handlers=[logging.StreamHandler()])
 
-# Credentials and API keys from environment variables
 USERNAME = os.getenv('MY_USERNAME')
 PASSWORD = os.getenv('MY_PASSWORD')
 VERIFICATION_EMAIL = os.getenv('VERIFICATION_EMAIL')
 PERPLEXITY_API_KEY = os.getenv('PERPLEXITY_API_KEY')
-# Hard-coded prompt value
 PROMPT = "give me a biased spicy opinion on tech or digital media taken from random famous reddit(recent). only text no numbers at the end , ready to copy paste, under 100 character"
 
 def fetch_text_from_perplexity():
@@ -58,14 +56,6 @@ def fetch_text_from_perplexity():
         return None
 
 def post_text_tweet(page, text):
-    try:
-        page.goto("https://twitter.com/compose/tweet")
-        sleep(uniform(5, 10))
-        # Increase timeout for finding textarea and post button
-        page.wait_for_selector("div[data-testid='tweetTextarea_0']", timeout=30000)
-        page.fill("div[data-testid='tweetTextarea_0']", text)
-        sleep(uniform(2, 4))
-        # Old method: try multiple selectors and wait longer for the post button
     try:
         page.goto("https://twitter.com/compose/tweet")
         sleep(uniform(5, 10))
@@ -118,41 +108,6 @@ def post_text_tweet(page, text):
     except Exception as e:
         print(f"[Bot] Failed to post tweet from compose page: {e}")
         logging.error(f"Failed to post tweet from compose page: {e}")
-                                print(f"[Bot] Textarea selector failed: {selector}")
-                                continue
-                        if not tweet_box_found:
-                            print("[Bot] Tweet textarea not found on home page.")
-                            logging.error("Tweet textarea not found on home page.")
-                            return
-                        sleep(uniform(2, 4))
-                        # Try multiple selectors for the post button
-                        post_selectors = [
-                            "div[data-testid='toolBar'] button[data-testid='tweetButtonInline']",
-                            "button[data-testid='tweetButtonInline']",
-                            "div[role='button'][data-testid='tweetButtonInline']",
-                            "button:has-text('Post')",
-                        ]
-                        post_clicked = False
-                        print("[Bot] Searching for post button on home page...")
-                        for selector in post_selectors:
-                            try:
-                                print(f"[Bot] Trying post button selector: {selector}")
-                                button = page.wait_for_selector(selector, timeout=20000)
-                                if button:
-                                    print("[Bot] Clicking post button...")
-                                    button.click()
-                                    post_clicked = True
-                                    break
-                            except Exception:
-                                print(f"[Bot] Post button selector failed: {selector}")
-                                continue
-                        if not post_clicked:
-                            print("[Bot] Tweet button not found on home page.")
-                            logging.error("Tweet button not found on home page.")
-                        else:
-                            print("[Bot] Tweet posted successfully from home page.")
-                            logging.info("Tweet posted successfully from home page.")
-                        print(f"[Bot] Final page URL after posting: {page.url}")
 
 def follow(page):
     follow_id_list = []  # List of usernames to follow (set as needed)
@@ -184,29 +139,24 @@ def unfollow(page):
     try:
         page.goto("https://twitter.com/@/following")
         sleep(uniform(5, 10))
-    except Exception as e:
-        logging.error(f"Error navigating to the following page: {e}")
-        return
-    try:
         unfollow_buttons = page.query_selector_all("button[role='button'][aria-label^='Following @']")
         if not unfollow_buttons:
             logging.error("No unfollow buttons found on the page.")
             return
         num_to_unfollow = randint(5, min(10, len(unfollow_buttons)))
+        unfollowed_count = 0
+        for button in range(num_to_unfollow):
+            try:
+                unfollow_buttons[button].click()
+                sleep(uniform(2, 3))
+                page.wait_for_selector("button[role='button'] span:has-text('Unfollow')").click()
+                sleep(uniform(2, 5))
+                unfollowed_count += 1
+            except Exception as e:
+                logging.error(f"Error unfollowing account number {button + 1}: {e}")
+        logging.info(f"Unfollowed {unfollowed_count} accounts.")
     except Exception as e:
-        logging.error(f"Error querying the unfollow buttons: {e}")
-        return
-    unfollowed_count = 0
-    for button in range(num_to_unfollow):
-        try:
-            unfollow_buttons[button].click()
-            sleep(uniform(2, 3))
-            page.wait_for_selector("button[role='button'] span:has-text('Unfollow')").click()
-            sleep(uniform(2, 5))
-            unfollowed_count += 1
-        except Exception as e:
-            logging.error(f"Error unfollowing account number {button + 1}: {e}")
-    logging.info(f"Unfollowed {unfollowed_count} accounts.")
+        logging.error(f"Error in unfollow(): {e}")
 
 def main():
     with sync_playwright() as p:
@@ -221,7 +171,6 @@ def main():
         page.goto("https://twitter.com/home")
         print(f"[Bot] Current URL: {page.url}")
         sleep(uniform(5, 10))
-        # Login flow
         if "/i/flow/login" in page.url or "/?logout" in page.url:
             print("[Bot] Login required. Starting login flow...")
             login_attempts = 0
@@ -233,14 +182,12 @@ def main():
                     print("[Bot] Clicking Next...")
                     page.click("span:has-text('Next')")
                     sleep(uniform(2, 5))
-                    # Verification step
                     if page.is_visible("input[name='text']") and page.is_visible("span:has-text('Next')"):
                         print("[Bot] Verification required. Filling email...")
                         page.fill("input[name='text']", VERIFICATION_EMAIL)
                         sleep(uniform(2, 4))
                         page.click("span:has-text('Next')")
                         sleep(uniform(2, 4))
-                    # Password step
                     if page.is_visible("input[name='password']"):
                         print("[Bot] Filling password...")
                         page.fill("input[name='password']", PASSWORD)
@@ -270,7 +217,6 @@ def main():
             post_text_tweet(page, text)
         else:
             print("[Bot] No text fetched from Perplexity.")
-        # Random follow/unfollow action
         action = choice(['follow', 'unfollow', 'none'])
         print(f"[Bot] Decided action: {action}")
         if action == 'follow':
