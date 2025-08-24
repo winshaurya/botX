@@ -1,3 +1,23 @@
+def click_dynamic_next_button(page, keywords=["next", "continue", "enter"]):
+    """
+    Searches for all visible buttons and clicks the first enabled one whose text matches any keyword.
+    Returns True if a button was clicked, False otherwise.
+    """
+    buttons = page.query_selector_all("button[role='button']")
+    for btn in buttons:
+        try:
+            text = btn.inner_text().strip().lower()
+            for kw in keywords:
+                if kw in text and btn.is_enabled():
+                    btn.click()
+                    print(f"[Bot] Clicked button with text: {text}")
+                    return True
+        except Exception as e:
+            continue
+    print(f"[Bot] No enabled button found for keywords: {keywords}")
+    # For debugging: log page HTML if no button found
+    logging.debug(page.content())
+    return False
 """
 # Trigger rebuild: test for line ending/corruption issue
 Twitter Bot for GitHub Actions
@@ -172,30 +192,18 @@ def main():
                     page.wait_for_selector("input[name='text']", timeout=20000)
                     page.fill("input[name='text']", USERNAME)
                     sleep(uniform(2, 5))
-                    # Click Next button (based on screenshot and HTML)
-                    next_button_selector = "button[role='button']:has-text('Next')"
-                    page.wait_for_selector(next_button_selector, timeout=20000)
-                    next_button = page.query_selector(next_button_selector)
-                    if next_button and next_button.is_enabled():
-                        next_button.click()
-                        print("[Bot] Clicked Next button.")
-                    else:
-                        print("[Bot] Next button not found or not enabled.")
+                    # Dynamically find and click Next/Continue/Enter button
+                    page.wait_for_selector("button[role='button']", timeout=20000)
+                    click_dynamic_next_button(page)
                     sleep(uniform(2, 5))
                     # Verification email input
                     if page.is_visible("input[data-testid='ocfEnterTextTextInput']"):
                         print("[Bot] Verification required. Filling email...")
                         page.fill("input[data-testid='ocfEnterTextTextInput']", VERIFICATION_EMAIL)
                         sleep(uniform(2, 4))
-                        # Click Next button after email (based on screenshot and HTML)
-                        next_button_selector = "button[role='button']:has-text('Next')"
-                        page.wait_for_selector(next_button_selector, timeout=20000)
-                        next_button = page.query_selector(next_button_selector)
-                        if next_button and next_button.is_enabled():
-                            next_button.click()
-                            print("[Bot] Clicked Next button after email.")
-                        else:
-                            print("[Bot] Next button after email not found or not enabled.")
+                        # Dynamically find and click Next/Continue/Enter button after email
+                        page.wait_for_selector("button[role='button']", timeout=20000)
+                        click_dynamic_next_button(page)
                         sleep(uniform(2, 4))
                     # Password input
                     if page.is_visible("input[name='password']"):
