@@ -28,7 +28,7 @@ PASSWORD = os.getenv('MY_PASSWORD')
 VERIFICATION_EMAIL = os.getenv('VERIFICATION_EMAIL')
 PERPLEXITY_API_KEY = os.getenv('PERPLEXITY_API_KEY')
 # Hard-coded prompt value
-PROMPT = "give me a biased opinion on tech or digital media taken from random famous reddit. only text no numbers at the end , ready to copy paste"
+PROMPT = "give me a biased spicy opinion on tech or digital media taken from random famous reddit(recent). only text no numbers at the end , ready to copy paste, under 100 character"
 
 def fetch_text_from_perplexity():
     url = "https://api.perplexity.ai/chat/completions"
@@ -61,9 +61,11 @@ def post_text_tweet(page, text):
     try:
         page.goto("https://twitter.com/compose/tweet")
         sleep(uniform(5, 10))
-        page.wait_for_selector("div[data-testid='tweetTextarea_0']", timeout=15000)
+        # Increase timeout for finding textarea and post button
+        page.wait_for_selector("div[data-testid='tweetTextarea_0']", timeout=30000)
         page.fill("div[data-testid='tweetTextarea_0']", text)
         sleep(uniform(2, 4))
+        # Old method: try multiple selectors and wait longer for the post button
         selectors = [
             "div[data-testid='toolBar'] button[data-testid='tweetButtonInline']",
             "button[data-testid='tweetButtonInline']",
@@ -72,11 +74,14 @@ def post_text_tweet(page, text):
         ]
         post_clicked = False
         for selector in selectors:
-            button = page.query_selector(selector)
-            if button:
-                button.click()
-                post_clicked = True
-                break
+            try:
+                button = page.wait_for_selector(selector, timeout=20000)
+                if button:
+                    button.click()
+                    post_clicked = True
+                    break
+            except Exception:
+                continue
         if not post_clicked:
             logging.error("Tweet button not found.")
         else:
