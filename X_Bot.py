@@ -247,7 +247,16 @@ def main():
         if text:
             print(f"[Bot] Text fetched: {text}")
             print("[Bot] Navigating to home page before posting...")
-            page.goto("https://x.com/home", wait_until="networkidle")
+            # More robust navigation: use domcontentloaded and higher timeout
+            try:
+                page.goto("https://x.com/home", wait_until="domcontentloaded", timeout=60000)
+            except Exception as e:
+                print(f"[Bot] Navigation to home failed: {e}. Retrying with default wait...")
+                try:
+                    page.goto("https://x.com/home", timeout=60000)
+                except Exception as e2:
+                    print(f"[Bot] Second navigation attempt failed: {e2}")
+                    return
             sleep(uniform(5, 10))
             print("[Bot] Posting tweet...")
             post_text_tweet(page, text)
