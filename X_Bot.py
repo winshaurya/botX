@@ -61,37 +61,68 @@ def post_text_tweet(page, text):
         page.goto("https://x.com/home", wait_until="domcontentloaded", timeout=60000)
         sleep(uniform(5, 10))
 
-        # Wait for the tweet box to be visible
-        tweet_box_selector = 'div[data-testid="tweetTextarea_0"][contenteditable="true"]'
-        try:
-            page.wait_for_selector(tweet_box_selector, timeout=40000)
-            tweet_box = page.query_selector(tweet_box_selector)
-            if tweet_box:
-                tweet_box.click()
+        # Robust search for tweet writing box
+        tweet_box_selectors = [
+            'div[data-testid="tweetTextarea_0"][contenteditable="true"]',
+            'div[role="textbox"][contenteditable="true"]',
+            'div.public-DraftEditor-content[contenteditable="true"]',
+            'div[aria-label="Post text"][contenteditable="true"]',
+        ]
+        tweet_box = None
+        for selector in tweet_box_selectors:
+            try:
+                page.wait_for_selector(selector, timeout=10000)
+                tweet_box = page.query_selector(selector)
+                if tweet_box:
+                    tweet_box.click()
+                    sleep(1)
+                    page.keyboard.type(text)
+                    print(f"[Bot] Typed tweet using selector: {selector}")
+                    break
+            except Exception as e:
+                print(f"[Bot] Selector not found: {selector} ({e})")
+        if not tweet_box:
+            print("[Bot] Could not find any tweet writing box. Trying to focus via tab...")
+            try:
+                page.keyboard.press('Tab')
                 sleep(1)
                 page.keyboard.type(text)
-                print("[Bot] Typed tweet in the box.")
-            else:
-                raise Exception("Tweet box not found after wait.")
-        except Exception as e:
-            print(f"[Bot] Failed to find or type in tweet box: {e}")
-            logging.error(f"Failed to find or type in tweet box: {e}")
-            return
+                print("[Bot] Typed tweet using Tab focus fallback.")
+            except Exception as e:
+                print(f"[Bot] Fallback typing failed: {e}")
+                logging.error(f"Fallback typing failed: {e}")
+                return
 
         sleep(uniform(2, 4))
 
-        # Click Post button (static selector from x.html)
-        post_button_selector = "button[data-testid='tweetButtonInline']"
-        page.wait_for_selector(post_button_selector, timeout=20000)
-        post_button = page.query_selector(post_button_selector)
-        if post_button and post_button.is_enabled():
-            post_button.click()
-            print("[Bot] Clicked Post button.")
-            logging.info("Tweet posted successfully.")
-        else:
-            print("[Bot] Post button not found or not enabled.")
-            logging.error("Post button not found or not enabled.")
-            return
+        # Robust search for Post button
+        post_button_selectors = [
+            "button[data-testid='tweetButtonInline']",
+            "div[role='button'][data-testid='tweetButtonInline']",
+            "button:has-text('Post')",
+            "button[role='button']:has(span:has-text('Post'))",
+        ]
+        post_button = None
+        for selector in post_button_selectors:
+            try:
+                page.wait_for_selector(selector, timeout=10000)
+                post_button = page.query_selector(selector)
+                if post_button and post_button.is_enabled():
+                    post_button.click()
+                    print(f"[Bot] Clicked Post button using selector: {selector}")
+                    logging.info("Tweet posted successfully.")
+                    break
+            except Exception as e:
+                print(f"[Bot] Post button selector not found: {selector} ({e})")
+        if not post_button:
+            print("[Bot] Could not find any Post button. Trying to submit via Enter key...")
+            try:
+                page.keyboard.press('Enter')
+                print("[Bot] Tried to submit tweet via Enter key.")
+            except Exception as e:
+                print(f"[Bot] Fallback submit failed: {e}")
+                logging.error(f"Fallback submit failed: {e}")
+                return
 
         print(f"[Bot] Final page URL after posting: {page.url}")
 
