@@ -183,17 +183,24 @@ def main():
                         print("[Bot] Verification required. Filling email...")
                         page.fill("input[data-testid='ocfEnterTextTextInput']", VERIFICATION_EMAIL)
                         sleep(uniform(2, 4))
-                        # Click Next button after email (robust selector for nested span structure)
+                        # Blur the email input to trigger validation
+                        page.eval_on_selector("input[data-testid='ocfEnterTextTextInput']", "el => el.blur()")
+                        # Wait for Next button to become enabled (up to 5 seconds)
                         next_span_selector = "button[role='button'] span:has-text('Next')"
                         page.wait_for_selector(next_span_selector, timeout=20000)
                         next_span = page.query_selector(next_span_selector)
+                        clicked = False
                         if next_span:
                             parent_button = next_span.evaluate_handle("node => node.closest('button')")
-                            if parent_button and parent_button.is_enabled():
-                                parent_button.click()
-                                print("[Bot] Clicked Next button after email (span parent).")
-                            else:
-                                print("[Bot] Next button after email not enabled.")
+                            for _ in range(10):  # Try for up to 5 seconds
+                                if parent_button and parent_button.is_enabled():
+                                    parent_button.click()
+                                    print("[Bot] Clicked Next button after email (span parent).")
+                                    clicked = True
+                                    break
+                                sleep(0.5)
+                            if not clicked:
+                                print("[Bot] Next button after email not enabled after waiting.")
                         else:
                             print("[Bot] Next button after email not found.")
                         sleep(uniform(2, 4))
