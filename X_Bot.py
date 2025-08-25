@@ -203,6 +203,16 @@ def main():
                                 print("[Bot] Next button after email not enabled after waiting.")
                         else:
                             print("[Bot] Next button after email not found.")
+                        # Detect and print any error messages shown after entering verification email
+                        error_message_selector = "div[role='alert'], div[data-testid='ocfEnterTextError']"
+                        error_messages = page.query_selector_all(error_message_selector)
+                        if error_messages:
+                            for err in error_messages:
+                                text = err.inner_text()
+                                if text:
+                                    print(f"[Bot] Error after email entry: {text}")
+                        else:
+                            print("[Bot] No error message detected after email entry.")
                         sleep(uniform(2, 4))
                     # Password input
                     if page.is_visible("input[name='password']"):
