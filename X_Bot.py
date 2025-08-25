@@ -54,108 +54,6 @@ def fetch_text_from_perplexity():
     except Exception as e:
         logging.error(f"Failed to fetch text from Perplexity: {e}")
         return None
-
-def post_text_tweet(page, text):
-    try:
-        # Always navigate to home after login
-        page.goto("https://x.com/home", wait_until="domcontentloaded", timeout=60000)
-        sleep(uniform(5, 10))
-
-        # Robust search for tweet writing box
-
-        # Updated selectors based on x.html
-        tweet_box_selectors = [
-            'div[contenteditable="true"][data-testid="tweetTextarea_0"]',
-            'div[role="textbox"][contenteditable="true"]',
-        ]
-        tweet_box = None
-        for selector in tweet_box_selectors:
-            try:
-                page.wait_for_selector(selector, timeout=10000)
-                tweet_box = page.query_selector(selector)
-                if tweet_box:
-                    tweet_box.click()
-                    sleep(1)
-                    page.keyboard.type(text)
-                    print(f"[Bot] Typed tweet using selector: {selector}")
-                    break
-            except Exception as e:
-                print(f"[Bot] Selector not found: {selector} ({e})")
-        if not tweet_box:
-            print("[Bot] Could not find any tweet writing box. Trying to focus via tab...")
-            try:
-                page.keyboard.press('Tab')
-                sleep(1)
-                page.keyboard.type(text)
-                print("[Bot] Typed tweet using Tab focus fallback.")
-            except Exception as e:
-                print(f"[Bot] Fallback typing failed: {e}")
-                logging.error(f"Fallback typing failed: {e}")
-                return
-
-        sleep(uniform(2, 4))
-
-        # Robust search for Post button
-
-        # Updated selectors for Post button based on x.html
-        post_button_selectors = [
-            "button[data-testid='tweetButtonInline']",
-            "button[role='button'][data-testid='tweetButtonInline']",
-            "button[type='button'][data-testid='tweetButtonInline']",
-        ]
-        post_button = None
-        for selector in post_button_selectors:
-            try:
-                page.wait_for_selector(selector, timeout=10000)
-                post_button = page.query_selector(selector)
-                if post_button and post_button.is_enabled():
-                    post_button.click()
-                    print(f"[Bot] Clicked Post button using selector: {selector}")
-                    logging.info("Tweet posted successfully.")
-                    break
-            except Exception as e:
-                print(f"[Bot] Post button selector not found: {selector} ({e})")
-        if not post_button:
-            print("[Bot] Could not find any Post button. Trying to submit via Enter key...")
-            try:
-                page.keyboard.press('Enter')
-                print("[Bot] Tried to submit tweet via Enter key.")
-            except Exception as e:
-                print(f"[Bot] Fallback submit failed: {e}")
-                logging.error(f"Fallback submit failed: {e}")
-                return
-
-        print(f"[Bot] Final page URL after posting: {page.url}")
-
-    except Exception as e:
-        print(f"[Bot] Failed to post tweet: {e}")
-        logging.error(f"Failed to post tweet: {e}")
-
-def follow(page):
-    follow_id_list = []  # List of usernames to follow (set as needed)
-    try:
-        if not follow_id_list:
-            logging.info("No follow_id_list provided, skipping follow.")
-            return
-        random_number = choice(range(len(follow_id_list)))
-        page.goto(f"https://twitter.com/{follow_id_list[random_number]}/followers")
-        sleep(uniform(5, 10))
-        follow_buttons = page.query_selector_all("button[aria-label^='Follow @'][role='button']")
-        if not follow_buttons:
-            logging.error("No follow buttons found on the page.")
-            return
-        num_to_follow = randint(1, min(15, len(follow_buttons)))
-        followed_count = 0
-        for button in range(num_to_follow):
-            try:
-                follow_buttons[button].click()
-                sleep(uniform(2, 5))
-                followed_count += 1
-            except Exception as e:
-                logging.error(f"Error following account number {button + 1}: {e}")
-        logging.info(f"Followed {followed_count} accounts.")
-    except Exception as e:
-        logging.error(f"Error in follow(): {e}")
 def unfollow(page):
     try:
         page.goto("https://twitter.com/@/following")
@@ -166,18 +64,93 @@ def unfollow(page):
             return
         num_to_unfollow = randint(5, min(10, len(unfollow_buttons)))
         unfollowed_count = 0
-        for button in range(num_to_unfollow):
+        for idx in range(num_to_unfollow):
             try:
-                unfollow_buttons[button].click()
+                unfollow_buttons[idx].click()
                 sleep(uniform(2, 3))
                 page.wait_for_selector("button[role='button'] span:has-text('Unfollow')").click()
                 sleep(uniform(2, 5))
                 unfollowed_count += 1
             except Exception as e:
-                logging.error(f"Error unfollowing account number {button + 1}: {e}")
+                logging.error(f"Error unfollowing account number {idx + 1}: {e}")
         logging.info(f"Unfollowed {unfollowed_count} accounts.")
     except Exception as e:
         logging.error(f"Error in unfollow(): {e}")
+
+# Clean follow function
+def follow(page):
+    """Stub for follow action. Implement logic as needed."""
+    print("[Bot] Follow action is not implemented yet.")
+    pass
+def post_text_tweet(page, text):
+    # Focus the tweet box and type text with random delays
+    # Improved tweet box detection
+    tweet_box_selectors = [
+        "div[aria-label='Tweet text']",
+        "div[data-testid='tweetTextarea_0']",
+        "div[role='textbox'][contenteditable='true']",
+        "div[role='textbox']",
+    ]
+    tweet_box = None
+    for selector in tweet_box_selectors:
+        try:
+            page.wait_for_selector(selector, timeout=7000)
+            tweet_box = page.query_selector(selector)
+            if tweet_box:
+                tweet_box.click()
+                break
+        except Exception:
+            continue
+    if tweet_box:
+        if text:
+            for char in str(text):
+                page.keyboard.type(char)
+                sleep(uniform(0.02, 0.10))
+            sleep(uniform(0.5, 1.5))
+        else:
+            print("[Bot] No text provided for tweet.")
+    else:
+        print("[Bot] Tweet box not found.")
+        logging.error("Tweet box not found.")
+        return
+
+    # Improved post button detection
+    post_button_selectors = [
+        "button[data-testid='tweetButtonInline']",
+        "div[data-testid='tweetButtonInline'] button",
+        "div[role='button'][data-testid='tweetButton']",
+        "button[aria-label='Tweet']",
+        "button:has-text('Post')",
+        "button:has-text('Tweet')",
+    ]
+    post_button = None
+    for selector in post_button_selectors:
+        try:
+            page.wait_for_selector(selector, timeout=7000)
+            post_button = page.query_selector(selector)
+            if post_button and post_button.is_enabled():
+                box = post_button.bounding_box()
+                if box:
+                    page.mouse.move(box['x'] + box['width']/2, box['y'] + box['height']/2, steps=randint(3, 10))
+                    sleep(uniform(0.1, 0.3))
+                post_button.click()
+                print(f"[Bot] Clicked Post button using selector: {selector}")
+                logging.info("Tweet posted successfully.")
+                break
+        except Exception as e:
+            print(f"[Bot] Post button selector not found: {selector} ({e})")
+    if not post_button:
+        print("[Bot] Could not find any Post button. Dumping HTML for debug...")
+        with open("page_debug_postbutton.html", "w", encoding="utf-8") as f:
+            f.write(page.content())
+        try:
+            page.keyboard.press('Enter')
+            print("[Bot] Tried to submit tweet via Enter key.")
+        except Exception as e:
+            print(f"[Bot] Fallback submit failed: {e}")
+            logging.error(f"Fallback submit failed: {e}")
+            return
+    return page.url
 def main():
     with sync_playwright() as p:
         print("[Bot] Launching browser...")
