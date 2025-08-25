@@ -58,7 +58,7 @@ def fetch_text_from_perplexity():
 def post_text_tweet(page, text):
     try:
         # Always navigate to home after login
-        page.goto("https://x.com/home")
+        page.goto("https://x.com/home", wait_until="domcontentloaded", timeout=60000)
         sleep(uniform(5, 10))
 
         # Wait for the tweet box to be visible
