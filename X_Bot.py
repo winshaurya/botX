@@ -62,11 +62,11 @@ def post_text_tweet(page, text):
         sleep(uniform(5, 10))
 
         # Robust search for tweet writing box
+
+        # Updated selectors based on x.html
         tweet_box_selectors = [
-            'div[data-testid="tweetTextarea_0"][contenteditable="true"]',
+            'div[contenteditable="true"][data-testid="tweetTextarea_0"]',
             'div[role="textbox"][contenteditable="true"]',
-            'div.public-DraftEditor-content[contenteditable="true"]',
-            'div[aria-label="Post text"][contenteditable="true"]',
         ]
         tweet_box = None
         for selector in tweet_box_selectors:
@@ -96,11 +96,12 @@ def post_text_tweet(page, text):
         sleep(uniform(2, 4))
 
         # Robust search for Post button
+
+        # Updated selectors for Post button based on x.html
         post_button_selectors = [
             "button[data-testid='tweetButtonInline']",
-            "div[role='button'][data-testid='tweetButtonInline']",
-            "button:has-text('Post')",
-            "button[role='button']:has(span:has-text('Post'))",
+            "button[role='button'][data-testid='tweetButtonInline']",
+            "button[type='button'][data-testid='tweetButtonInline']",
         ]
         post_button = None
         for selector in post_button_selectors:
