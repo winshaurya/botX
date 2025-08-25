@@ -183,14 +183,19 @@ def main():
                         print("[Bot] Verification required. Filling email...")
                         page.fill("input[data-testid='ocfEnterTextTextInput']", VERIFICATION_EMAIL)
                         sleep(uniform(2, 4))
-                        # Click Next button after email (static selector from x.html)
-                        page.wait_for_selector(next_button_selector, timeout=20000)
-                        next_button = page.query_selector(next_button_selector)
-                        if next_button and next_button.is_enabled():
-                            next_button.click()
-                            print("[Bot] Clicked Next button after email.")
+                        # Click Next button after email (robust selector for nested span structure)
+                        next_span_selector = "button[role='button'] span:has-text('Next')"
+                        page.wait_for_selector(next_span_selector, timeout=20000)
+                        next_span = page.query_selector(next_span_selector)
+                        if next_span:
+                            parent_button = next_span.evaluate_handle("node => node.closest('button')")
+                            if parent_button and parent_button.is_enabled():
+                                parent_button.click()
+                                print("[Bot] Clicked Next button after email (span parent).")
+                            else:
+                                print("[Bot] Next button after email not enabled.")
                         else:
-                            print("[Bot] Next button after email not found or not enabled.")
+                            print("[Bot] Next button after email not found.")
                         sleep(uniform(2, 4))
                     # Password input
                     if page.is_visible("input[name='password']"):
